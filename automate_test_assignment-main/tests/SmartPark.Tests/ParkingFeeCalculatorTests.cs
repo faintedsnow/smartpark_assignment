@@ -180,7 +180,30 @@ public class ParkingFeeCalculatorTests
     #endregion
 
     #region Edge Cases
-    // Test invalid inputs and boundary conditions
+    [Fact]
+    public void CalculateFee_CheckOutBeforeCheckIn_ThrowsArgumentException()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 12, 0, 0);
+        var checkOut = new DateTime(2026, 3, 16, 10, 0, 0);
+        Assert.Throws<ArgumentException>(() => _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut));
+    }
+
+    [Fact]
+    public void CalculateFee_ZeroDuration_ReturnsFree_Duplicate()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        var result = _calculator.CalculateFee(VehicleType.SUV, MembershipTier.Platinum, checkIn, checkIn);
+        Assert.Equal(0m, result.TotalFee);
+    }
+
+    [Fact]
+    public void CalculateFee_ExactGraceBoundary_31Minutes_Returns1Hour()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        var checkOut = checkIn.AddMinutes(31);
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+        Assert.Equal(1000m, result.TotalFee);
+    }
     #endregion
 
     #region Property-Based Tests
