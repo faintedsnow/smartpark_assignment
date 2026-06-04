@@ -58,23 +58,98 @@ public class ParkingSessionManagerTests
     }
 
     #region CheckIn — Happy Path
-    // Test successful vehicle check-in and verify correct interactions
+    [Fact]
+    public async Task CheckInAsync_Successful_SavesTicketAndLooksUpMembership()
+    {
+        _membershipStub.Setup(m => m.GetMembershipTier("PP-9999")).Returns(MembershipTier.Guest);
+        _repoStub.Setup(r => r.GetActiveTicketByPlateAsync("PP-9999")).ReturnsAsync((ParkingTicket?)null);
+        _dateTimeStub.Setup(d => d.Now).Returns(new DateTime(2026, 3, 16, 10, 0, 0));
+
+        var ticket = await _manager.CheckInAsync("PP-9999", VehicleType.Car);
+
+        _membershipStub.Verify(m => m.GetMembershipTier("PP-9999"), Times.Once);
+        _repoStub.Verify(r => r.SaveTicketAsync(It.IsAny<ParkingTicket>()), Times.Once);
+        Assert.NotNull(ticket);
+    }
     #endregion
 
     #region CheckIn — Validation
-    // Test check-in error scenarios and verify side effects
+    [Fact]
+    public async Task CheckInAsync_Duplicate_ThrowsInvalidOperationException_DoesNotSave()
+    {
+        var existingTicket = new ParkingTicket();
+        _repoStub.Setup(r => r.GetActiveTicketByPlateAsync("PP-9999")).ReturnsAsync(existingTicket);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _manager.CheckInAsync("PP-9999", VehicleType.Car));
+
+        _repoStub.Verify(r => r.SaveTicketAsync(It.IsAny<ParkingTicket>()), Times.Never);
+    }
     #endregion
 
     #region CheckOut — Happy Path
-    // Test successful check-out with payment and notification
+    [Fact]
+    public async Task CheckOutAsync_HappyPath_UpdatesTicketAndSendsReceipt()
+    {
+        var ticket = new ParkingTicket 
+        { 
+            TicketId = "T-123", 
+            Vehicle = new Vehicle { LicensePlate = "PP-1111", Type = VehicleType.Car }, 
+            CheckInTime = new DateTime(2026, 3, 16, 10, 0, 0)
+        };
+        _repoStub.Setup(r => r.GetTicketByIdAsync("T-123")).ReturnsAsync(ticket);
+        _dateTimeStub.Setup(d => d.Now).Returns(new DateTime(2026, 3, 16, 12, 0, 0));
+        _paymentStub.Setup(p => p.ProcessPaymentAsync("T-123", It.IsAny<decimal>())).ReturnsAsync(true);
+
+        var result = await _manager.CheckOutAsync("T-123", "012-345-678");
+
+        _repoStub.Verify(r => r.UpdateTicketAsync(ticket), Times.Once);
+        _notificationStub.Verify(n => n.SendReceiptAsync("012-345-678", It.IsAny<string>()), Times.Once);
+        Assert.NotNull(result);
+    }
     #endregion
 
     #region CheckOut — Payment Failure
-    // Test behavior when the payment step fails
+    [Fact]
+    public async Task CheckOutAsync_PaymentFailure_ThrowsException_DoesNotUpdateOrSendReceipt()
+    {
+        var ticket = new ParkingTicket 
+        { 
+            TicketId = "T-123", 
+            Vehicle = new Vehicle { LicensePlate = "PP-1111", Type = VehicleType.Car }, 
+            CheckInTime = new DateTime(2026, 3, 16, 10, 0, 0)
+        };
+        _repoStub.Setup(r => r.GetTicketByIdAsync("T-123")).ReturnsAsync(ticket);
+        _dateTimeStub.Setup(d => d.Now).Returns(new DateTime(2026, 3, 16, 12, 0, 0));
+        _paymentStub.Setup(p => p.ProcessPaymentAsync("T-123", It.IsAny<decimal>())).ReturnsAsync(false);
+
+        await Assert.ThrowsAsync<Exception>(() => _manager.CheckOutAsync("T-123", "012-345-678"));
+
+        _repoStub.Verify(r => r.UpdateTicketAsync(It.IsAny<ParkingTicket>()), Times.Never);
+        _notificationStub.Verify(n => n.SendReceiptAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
     #endregion
 
     #region CheckOut — Notification Failure
-    // Test what happens when sending the receipt fails
+    [Fact]
+    public async Task CheckOutAsync_NotificationFailure_StillSucceeds_GracefulDegradation()
+    {
+        var ticket = new ParkingTicket 
+        { 
+            TicketId = "T-123", 
+            Vehicle = new Vehicle { LicensePlate = "PP-1111", Type = VehicleType.Car }, 
+            CheckInTime = new DateTime(2026, 3, 16, 10, 0, 0)
+        };
+        _repoStub.Setup(r => r.GetTicketByIdAsync("T-123")).ReturnsAsync(ticket);
+        _dateTimeStub.Setup(d => d.Now).Returns(new DateTime(2026, 3, 16, 12, 0, 0));
+        _paymentStub.Setup(p => p.ProcessPaymentAsync("T-123", It.IsAny<decimal>())).ReturnsAsync(true);
+        _notificationStub.Setup(n => n.SendReceiptAsync(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception("SMS gateway down"));
+
+        var result = await _manager.CheckOutAsync("T-123", "012-345-678");
+
+        _repoStub.Verify(r => r.UpdateTicketAsync(ticket), Times.Once);
+        Assert.NotNull(result);
+        Assert.Equal(2000m, result.TotalFee);
+    }
     #endregion
 
     #region CheckOut — Validation
