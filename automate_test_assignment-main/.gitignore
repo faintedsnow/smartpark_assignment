@@ -35,3 +35,6 @@ docs/*
 !docs/getting-started.md
 final_assignment_guideline/
 _lecturer_answer_key/
+
+## Custom Speedrun Guide
+speedrun.md
