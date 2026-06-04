@@ -184,7 +184,67 @@ public class ParkingFeeCalculatorTests
     #endregion
 
     #region Property-Based Tests
-    // Write at least 5 FsCheck properties that must hold for ALL valid inputs
-    // You may need custom Arbitrary<T> for generating valid DateTime pairs
+    [Property]
+    public void Fee_IsNeverNegative(VehicleType vehicleType, MembershipTier membership, DateTime checkIn, int durationMinutes, bool isLostTicket, bool isHoliday)
+    {
+        durationMinutes = Math.Abs(durationMinutes % 500000);
+        var checkOut = checkIn.AddMinutes(durationMinutes);
+        var result = _calculator.CalculateFee(vehicleType, membership, checkIn, checkOut, isLostTicket, isHoliday);
+        Assert.True(result.TotalFee >= 0);
+    }
+
+    [Property]
+    public void GracePeriod_IsAlwaysZero(VehicleType vehicleType, MembershipTier membership, DateTime checkIn, int durationMinutes, bool isLostTicket, bool isHoliday)
+    {
+        durationMinutes = Math.Abs(durationMinutes % 31);
+        var checkOut = checkIn.AddMinutes(durationMinutes);
+        var result = _calculator.CalculateFee(vehicleType, membership, checkIn, checkOut, isLostTicket, isHoliday);
+        Assert.Equal(0m, result.TotalFee);
+    }
+
+    [Property]
+    public void CheckOutBeforeCheckIn_ThrowsArgumentException(VehicleType vehicleType, MembershipTier membership, DateTime checkIn, int negativeDuration, bool isLostTicket, bool isHoliday)
+    {
+        negativeDuration = -Math.Abs(negativeDuration % 500000) - 1;
+        var checkOut = checkIn.AddMinutes(negativeDuration);
+        Assert.Throws<ArgumentException>(() => _calculator.CalculateFee(vehicleType, membership, checkIn, checkOut, isLostTicket, isHoliday));
+    }
+
+    [Property]
+    public void LostTicketPenalty_AppliesCorrectly(VehicleType vehicleType, MembershipTier membership, DateTime checkIn, int durationMinutes, bool isHoliday)
+    {
+        durationMinutes = Math.Abs(durationMinutes % 500000);
+        if (durationMinutes <= 30) durationMinutes = 31;
+        
+        var checkOut = checkIn.AddMinutes(durationMinutes);
+        
+        var resultWithoutPenalty = _calculator.CalculateFee(vehicleType, membership, checkIn, checkOut, false, isHoliday);
+        var resultWithPenalty = _calculator.CalculateFee(vehicleType, membership, checkIn, checkOut, true, isHoliday);
+        
+        Assert.Equal(resultWithoutPenalty.TotalFee + 20000m, resultWithPenalty.TotalFee);
+    }
+
+    [Property]
+    public void BaseFee_IsMonotonicallyIncreasing(VehicleType vehicleType, int duration1, int duration2)
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        duration1 = Math.Abs(duration1 % (10 * 60));
+        duration2 = Math.Abs(duration2 % (10 * 60));
+        
+        if (duration1 > duration2) 
+        {
+            var temp = duration1;
+            duration1 = duration2;
+            duration2 = temp;
+        }
+        
+        var checkOut1 = checkIn.AddMinutes(duration1);
+        var checkOut2 = checkIn.AddMinutes(duration2);
+        
+        var result1 = _calculator.CalculateFee(vehicleType, MembershipTier.Guest, checkIn, checkOut1, false, false);
+        var result2 = _calculator.CalculateFee(vehicleType, MembershipTier.Guest, checkIn, checkOut2, false, false);
+        
+        Assert.True(result1.TotalFee <= result2.TotalFee);
+    }
     #endregion
 }
