@@ -114,7 +114,23 @@ public class ParkingFeeCalculatorTests
     #endregion
 
     #region Overnight Fee
-    // Test the flat fee applied for sessions that extend into late hours
+    [Fact]
+    public void CalculateFee_Overnight_Car_4Hours_Returns6000()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 20, 0, 0); // 8 PM
+        var checkOut = checkIn.AddHours(4); // 12 AM -> Base 4000 + 2000 = 6000
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+        Assert.Equal(6000m, result.TotalFee);
+    }
+    
+    [Fact]
+    public void CalculateFee_NoOvernight_Car_9Hours_Returns8000()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 8, 0, 0); // 8 AM
+        var checkOut = checkIn.AddHours(9); // 5 PM
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+        Assert.Equal(8000m, result.TotalFee);
+    }
     #endregion
 
     #region Weekend Surcharge
