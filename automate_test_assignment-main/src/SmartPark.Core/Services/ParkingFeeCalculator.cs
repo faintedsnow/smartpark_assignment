@@ -135,6 +135,11 @@ public class ParkingFeeCalculator
         };
         decimal discountAmount = (baseFee + surchargeAmount) * discountRate;
 
-        return new ParkingFeeResult { TotalFee = baseFee + overnightFee + surchargeAmount - discountAmount };
+        decimal penaltyAmount = isLostTicket ? LostTicketPenalty : 0m;
+
+        decimal totalFee = baseFee + overnightFee + surchargeAmount - discountAmount + penaltyAmount;
+        if (totalFee < 0) totalFee = 0;
+
+        return new ParkingFeeResult { TotalFee = totalFee };
     }
 }
