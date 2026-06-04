@@ -525,15 +525,17 @@ ParkingFeeCalculator Scenarios
 | **#** | **Scenario**                    | **Vehicle**  | **Duration**         | **Membership** | **Special**   | **Expected** | **Technique** |
 | ----- | ------------------------------- | ------------ | -------------------- | -------------- | ------------- | ------------ | ------------- |
 | _1_   | _Basic motorcycle fee_          | _Motorcycle_ | _2h_                 | _Guest_        | _None_        | _1,000 KHR_  | _Unit Test_   |
-| _2_   | _Grace period (exactly 30 min)_ | _Car_        | _30 min_             | _Guest_        | _None_        | _0 KHR_      | _Unit Test_   |
+| _2_   | _Basic car fee_                 | _Car_        | _3h_                 | _Guest_        | _None_        | _3,000 KHR_  | _Unit Test_   |
 | _3_   | _Basic SUV fee_                 | _SUV_        | _1h_                 | _Guest_        | _None_        | _1,500 KHR_  | _Unit Test_   |
-| _4_   | _Rounding up time (1h 1m)_      | _Car_        | _1h 1min_            | _Guest_        | _None_        | _2,000 KHR_  | _Unit Test_   |
-| _5_   | _Daily Cap limit_               | _Motorcycle_ | _10h_                | _Guest_        | _None_        | _4,000 KHR_  | _Unit Test_   |
-| _6_   | _Overnight fee_                 | _Car_        | _4h (crosses 10 PM)_ | _Guest_        | _None_        | _6,000 KHR_  | _Unit Test_   |
-| _7_   | _Weekend surcharge_             | _Car_        | _2h_                 | _Guest_        | _Saturday_    | _2,400 KHR_  | _Unit Test_   |
-| _8_   | _Holiday surcharge_             | _SUV_        | _2h_                 | _Guest_        | _Holiday_     | _4,500 KHR_  | _Unit Test_   |
-| _9_   | _Membership discount (Gold)_    | _Car_        | _2h_                 | _Gold_         | _None_        | _1,500 KHR_  | _Unit Test_   |
-| _10_  | _Lost Ticket penalty_           | _Car_        | _2h_                 | _Guest_        | _Lost Ticket_ | _22,000 KHR_ | _Unit Test_   |
+| _4_   | _Grace period (≤ 30 min)_       | _Car_        | _30 min_             | _Guest_        | _None_        | _0 KHR_      | _Unit Test_   |
+| _5_   | _Duration rounding (up)_        | _Car_        | _1h 1min_            | _Guest_        | _None_        | _2,000 KHR_  | _Unit Test_   |
+| _6_   | _Daily Cap limit_               | _Motorcycle_ | _10h_                | _Guest_        | _None_        | _4,000 KHR_  | _Unit Test_   |
+| _7_   | _Overnight fee_                 | _Car_        | _4h (crosses 10 PM)_ | _Guest_        | _None_        | _6,000 KHR_  | _Unit Test_   |
+| _8_   | _Weekend surcharge_             | _Car_        | _2h_                 | _Guest_        | _Saturday_    | _2,400 KHR_  | _Unit Test_   |
+| _9_   | _Holiday surcharge_             | _SUV_        | _2h_                 | _Guest_        | _Holiday_     | _4,500 KHR_  | _Unit Test_   |
+| _10_  | _Membership discount (Gold)_    | _Car_        | _2h_                 | _Gold_         | _None_        | _1,500 KHR_  | _Unit Test_   |
+| _11_  | _Lost Ticket penalty_           | _Car_        | _2h_                 | _Guest_        | _Lost Ticket_ | _22,000 KHR_ | _Unit Test_   |
+| _12_  | _Invalid Dates (Exception)_     | _Car_        | _-1h (Invalid)_      | _Guest_        | _None_        | _Exception_  | _Unit Test_   |
 
 _↑ This is just a sample row. Add as many rows as you need in your own report._
 
@@ -541,40 +543,37 @@ ParkingSessionManager Scenarios
 
 📝 _Minimum: 5 scenarios._
 
-|        |                       |                                                                      |                                                           |                                       |
-| ------ | --------------------- | -------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------- |
-| **\#** | **Scenario**          | **Test Double Setup**                                                | **Expected Behavior**                                     | **Verifications**                     |
-| _1_    | _Successful check-in_ | _Repo.GetActiveTicketByPlateAsync returns null (no existing ticket)_ | _Returns a new ParkingTicket with correct plate and time_ | _SaveTicketAsync called exactly once_ |
-|        |                       |                                                                      |                                                           |                                       |
-|        |                       |                                                                      |                                                           |                                       |
-
-_↑ This is just a sample row. Add as many rows as you need in your own report._
+| **#** | **Scenario** | **Test Double Setup** | **Expected Behavior** | **Verifications** |
+| ----- | --------------------- | -------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------- |
+| _1_   | _Successful check-in_ | _Repo.GetActiveTicket returns null, DateTime stubbed_ | _Returns a new ParkingTicket with correct plate and time_ | _SaveTicketAsync called exactly once_ |
+| _2_   | _Duplicate check-in_ | _Repo.GetActiveTicket returns existing ticket_ | _Throws InvalidOperationException_ | _SaveTicketAsync NOT called_ |
+| _3_   | _Successful check-out_ | _Repo.GetTicketById returns ticket, Payment stub returns true_ | _Returns ParkingFeeResult, sets checkOut time on ticket_ | _UpdateTicketAsync called, SendReceiptAsync called_ |
+| _4_   | _Payment failure_ | _Repo.GetTicketById returns ticket, Payment stub returns false_ | _Throws Exception_ | _UpdateTicketAsync NOT called, SendReceipt NOT called_ |
+| _5_   | _Notification failure_ | _Notification stub throws exception during SendReceiptAsync_ | _Returns ParkingFeeResult successfully (graceful degradation)_ | _PaymentGateway called, UpdateTicketAsync called_ |
 
 Integration Test Scenarios
 
 📝 _Minimum: 5 scenarios._
 
-|        |                                    |                                                 |                                                 |
-| ------ | ---------------------------------- | ----------------------------------------------- | ----------------------------------------------- |
-| **\#** | **Scenario**                       | **Components**                                  | **Expected Result**                             |
-| _1_    | _Full parking flow (car, 2 hours)_ | _FeeCalculator + InMemoryRepo + SessionManager_ | _Fee = 2,000 KHR, ticket marked as checked out_ |
-|        |                                    |                                                 |                                                 |
-
-_↑ This is just a sample row. Add as many rows as you need in your own report._
+| **#** | **Scenario** | **Components** | **Expected Result** |
+| ----- | ---------------------------------- | ----------------------------------------------- | ----------------------------------------------- |
+| _1_   | _Full parking flow (car, 2 hours)_ | _FeeCalculator + InMemoryRepo + SessionManager_ | _Fee = 2,000 KHR, ticket marked as checked out_ |
+| _2_   | _Multiple vehicles concurrent_ | _FeeCalculator + InMemoryRepo + SessionManager_ | _Check in 3, check out 1, 2 remain active in repo_ |
+| _3_   | _Error recovery (failed payment)_ | _FeeCalculator + InMemoryRepo + SessionManager_ | _Payment fails, ticket remains active in repo without checkOut_ |
+| _4_   | _Edge-to-Edge (Overnight + Weekend + Gold)_ | _FeeCalculator + InMemoryRepo + SessionManager_ | _Correct fee calculated including modifiers and discounts_ |
+| _5_   | _Grace period integration_ | _FeeCalculator + InMemoryRepo + SessionManager_ | _Check out within 15 min results in 0 KHR fee_ |
 
 1.2 Property-Based Test Properties
 
 📝 _List the properties you will verify with FsCheck. Explain WHY each property should always be true, no matter what inputs are generated. Minimum: 5 properties._
 
-|        |                               |                                                                                                 |
-| ------ | ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| **\#** | **Property**                  | **Why It Must Always Hold**                                                                     |
-| _1_    | _Fee is never negative_       | _A parking fee cannot be negative because you cannot owe a customer money for parking._         |
-| _2_    | _Grace period is always free_ | _The business rule says parking ≤30 min costs 0 KHR, regardless of vehicle type or membership._ |
-|        |                               |                                                                                                 |
-|        |                               |                                                                                                 |
-
-_↑ This is just a sample row. Add as many rows as you need in your own report._
+| **#** | **Property** | **Why It Must Always Hold** |
+| ----- | ----------------------------- | ----------------------------------------------------------------------------------------------- |
+| _1_   | _Fee is never negative_ | _A parking fee cannot be negative because you cannot owe a customer money for parking._ |
+| _2_   | _Grace period is always free_ | _The business rule says parking ≤30 min costs 0 KHR, regardless of vehicle type or membership._ |
+| _3_   | _Members pay less than or equal to guests_ | _Members have discount rates (10%, 25%, 40%), so their fee should never exceed a guest's._ |
+| _4_   | _Lost ticket adds exactly 20,000 penalty_ | _The penalty is not discounted and should exactly increase the total by 20,000 KHR._ |
+| _5_   | _Daily cap is respected_ | _The base fee portion before discounts/surcharges should never exceed the vehicle's cap limit._ |
 
 Part 2: TDD Evidence
 
