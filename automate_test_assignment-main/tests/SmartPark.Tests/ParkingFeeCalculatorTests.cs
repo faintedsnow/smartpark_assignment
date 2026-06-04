@@ -169,7 +169,14 @@ public class ParkingFeeCalculatorTests
     #endregion
 
     #region Lost Ticket
-    // Test the penalty and how it interacts with other fee modifiers
+    [Fact]
+    public void CalculateFee_LostTicket_Car_2Hours_Returns22000()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0); // Monday
+        var checkOut = checkIn.AddHours(2); // Car base: 2000
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut, isLostTicket: true);
+        Assert.Equal(22000m, result.TotalFee);
+    }
     #endregion
 
     #region Edge Cases
