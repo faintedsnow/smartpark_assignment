@@ -586,13 +586,19 @@ To get your commit hashes, run: git log --oneline
 |        |                 |                               |                                                     |
 | ------ | --------------- | ----------------------------- | --------------------------------------------------- |
 | **\#** | **Commit Hash** | **Type (RED/GREEN/REFACTOR)** | **Description**                                     |
-| _1_    | _a1b2c3d_       | _RED_                         | _Add failing test for basic motorcycle fee_         |
-| _2_    | _e4f5g6h_       | _GREEN_                       | _Implement motorcycle hourly rate to pass the test_ |
-| _3_    | _i7j8k9l_       | _REFACTOR_                    | _Extract rate lookup to switch expression_          |
-|        |                 |                               |                                                     |
-|        |                 |                               |                                                     |
-
-_↑ This is just a sample row. Add as many rows as you need in your own report._
+| _1_    | _1d9bbb7_       | _RED_                         | _Add failing test for basic motorcycle fee_         |
+| _2_    | _2041da2_       | _GREEN_                       | _Implement motorcycle hourly rate to pass the test_ |
+| _3_    | _0de7350_       | _RED_                         | _Add tests for Car, SUV, Grace Period, Rounding, and failing test for Daily Cap_ |
+| _4_    | _fb2a52b_       | _GREEN_                       | _Implement daily cap logic_                         |
+| _5_    | _6dfacbd_       | _RED_                         | _Add failing test for overnight fee_                |
+| _6_    | _b628ec1_       | _GREEN_                       | _Implement overnight fee logic_                     |
+| _7_    | _64c3ec6_       | _RED_                         | _Add failing test for weekend and holiday surcharges_ |
+| _8_    | _434a210_       | _GREEN_                       | _Implement weekend and holiday surcharges_          |
+| _9_    | _fb67a30_       | _RED_                         | _Add failing test for membership discounts_         |
+| _10_   | _dd4671c_       | _GREEN_                       | _Implement membership discounts_                    |
+| _11_   | _ee3edfe_       | _RED_                         | _Add failing test for lost ticket penalty_          |
+| _12_   | _dcb2c0b_       | _GREEN_                       | _Implement lost ticket penalty_                     |
+| _13_   | _64e577d_       | _REFACTOR_                    | _Fix duration rounding test expectation_            |
 
 Part 3: Test Results
 
@@ -622,17 +628,42 @@ dotnet test --filter "ParkingFeeCalculatorTests"
 </tbody>
 </table>
 
-|                                          |
+| Test Run Successful. Total tests: 30, Passed: 30, Failed: 0, Skipped: 0 |
 | ---------------------------------------- |
-| _\[paste your actual test output here\]_ |
+| ✓ CalculateFee_GracePeriod_30MinutesOrLess_ReturnsFree (4 cases) |
+| ✓ CalculateFee_Motorcycle_2Hours_Returns1000 |
+| ✓ CalculateFee_Car_3Hours_Returns3000 |
+| ✓ CalculateFee_SUV_1Hour_Returns1500 |
+| ✓ CalculateFee_DurationRounding_AlwaysRoundsUp (7 cases) |
+| ✓ CalculateFee_DailyCap_Motorcycle_10Hours_CappedAt4000 |
+| ✓ CalculateFee_Overnight_Car_4Hours_Returns6000 |
+| ✓ CalculateFee_NoOvernight_Car_9Hours_Returns8000 |
+| ✓ CalculateFee_WeekendSurcharge_Saturday_Car_2Hours_Returns2400 |
+| ✓ CalculateFee_HolidaySurcharge_TakesPriorityOverWeekend |
+| ✓ CalculateFee_MembershipDiscount_Gold_25PercentOff |
+| ✓ CalculateFee_LostTicket_Car_2Hours_Returns22000 |
+| ✓ CalculateFee_CheckOutBeforeCheckIn_ThrowsArgumentException |
+| ✓ CalculateFee_ZeroDuration_ReturnsFree |
+| ✓ CalculateFee_ZeroDuration_ReturnsFree_Duplicate |
+| ✓ CalculateFee_ExactGraceBoundary_31Minutes_Returns1Hour |
+| ✓ Fee_IsNeverNegative [FsCheck 100 tests] |
+| ✓ GracePeriod_IsAlwaysZero [FsCheck 100 tests] |
+| ✓ CheckOutBeforeCheckIn_ThrowsArgumentException [FsCheck 100 tests] |
+| ✓ LostTicketPenalty_AppliesCorrectly [FsCheck 100 tests] |
+| ✓ BaseFee_IsMonotonicallyIncreasing [FsCheck 100 tests] |
 
 3.2 Test Doubles Results
 
 Run: dotnet test --filter "ParkingSessionManagerTests"
 
-|                                          |
+| Test Run Successful. Total tests: 6, Passed: 6, Failed: 0, Skipped: 0 |
 | ---------------------------------------- |
-| _\[paste your actual test output here\]_ |
+| ✓ CheckInAsync_Successful_SavesTicketAndLooksUpMembership [56 ms] |
+| ✓ CheckInAsync_Duplicate_ThrowsInvalidOperationException_DoesNotSave |
+| ✓ CheckInAsync_NewVehicle_LookUpMembership |
+| ✓ CheckOutAsync_HappyPath_UpdatesTicketAndSendsReceipt [7 ms] |
+| ✓ CheckOutAsync_PaymentFailure_ThrowsException_DoesNotUpdateOrSendReceipt |
+| ✓ CheckOutAsync_NotificationFailure_StillSucceeds_GracefulDegradation |
 
 3.3 Property-Based Test Results
 
@@ -655,17 +686,26 @@ Run your FsCheck tests. The output should show how many random inputs were teste
 </tbody>
 </table>
 
-|                                         |
+| Test Run Successful. Total PBT tests: 5, all passed (100 random inputs each) |
 | --------------------------------------- |
-| _\[paste your actual PBT output here\]_ |
+| ✓ Fee_IsNeverNegative [13 ms] — Ok, passed 100 tests |
+| ✓ GracePeriod_IsAlwaysZero [6 ms] — Ok, passed 100 tests |
+| ✓ CheckOutBeforeCheckIn_ThrowsArgumentException [3 ms] — Ok, passed 100 tests |
+| ✓ LostTicketPenalty_AppliesCorrectly [3 ms] — Ok, passed 100 tests |
+| ✓ BaseFee_IsMonotonicallyIncreasing [77 ms] — Ok, passed 100 tests |
 
 3.4 Integration Test Results
 
 Run: dotnet test --filter "IntegrationTests"
 
-|                                          |
+| Test Run Successful. Total tests: 6, Passed: 6, Failed: 0, Skipped: 0 |
 | ---------------------------------------- |
-| _\[paste your actual test output here\]_ |
+| ✓ FullFlow_CheckInAndCheckOut_CalculatesCorrectFee |
+| ✓ FullFlow_ComplexScenario_ChecksInAndChecksOut_WithAllModifiers |
+| ✓ MultipleVehicles_CheckIn3_CheckOut1_TwoRemainActive |
+| ✓ ErrorRecovery_FailedPayment_TicketRemainsActive |
+| ✓ ErrorRecovery_DuplicateCheckIn_ThrowsAndOriginalRemains |
+| ✓ EdgeToEdge_GracePeriod_CheckOutWithin15Min_FreeParking |
 
 3.5 Code Coverage Report
 
@@ -680,9 +720,9 @@ The output will show a coverage report file path. Open it and fill in the number
 |                       |                   |                     |
 | --------------------- | ----------------- | ------------------- |
 | **Class**             | **Line Coverage** | **Branch Coverage** |
-| ParkingFeeCalculator  | _%_               | _%_                 |
-| ParkingSessionManager | _%_               | _%_                 |
-| Overall               | _%_               | _%_                 |
+| ParkingFeeCalculator  | 81.25%            | 90.47%              |
+| ParkingSessionManager | 96.72%            | 75.00%              |
+| Overall               | 72.11%            | 88.46%              |
 
 3.6 Full Test Summary
 
@@ -690,16 +730,15 @@ Finally, run ALL tests at once and paste the full output:
 
 dotnet test
 
-|                                   |
-| --------------------------------- |
-| _\[paste full test output here\]_ |
+| Test Run Summary |
+| ---------------- |
+| Determining projects to restore... <br/> All projects are up-to-date for restore. <br/> SmartPark.Core -> D:\automate_test_assignment-main\automate_test_assignment-main\src\SmartPark.Core\bin\Debug\net10.0\SmartPark.Core.dll <br/> SmartPark.Tests -> D:\automate_test_assignment-main\automate_test_assignment-main\tests\SmartPark.Tests\bin\Debug\net10.0\SmartPark.Tests.dll <br/> Test run for D:\automate_test_assignment-main\automate_test_assignment-main\tests\SmartPark.Tests\bin\Debug\net10.0\SmartPark.Tests.dll (.NETCoreApp,Version=v10.0) <br/> A total of 1 test files matched the specified pattern. <br/> Passed!  - Failed:     0, Passed:    42, Skipped:     0, Total:    42, Duration: 149 ms - SmartPark.Tests.dll (net10.0) |
 
 Fill in the counts:
 
-|                 |            |            |             |
-| --------------- | ---------- | ---------- | ----------- |
 | **Total Tests** | **Passed** | **Failed** | **Skipped** |
-|                 |            |            |             |
+| --------------- | ---------- | ---------- | ----------- |
+| **42**          | 42         | 0          | 0           |
 
 Part 4: Traceability Matrix
 
@@ -707,36 +746,46 @@ Part 4: Traceability Matrix
 
 📝 _For each business rule in the spec, write which test method(s) verify it. Every rule must have at least one test._
 
-|                                 |                                                                                          |                                |               |
-| ------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------ | ------------- |
-| **Business Rule**               | **Test Method Name(s)**                                                                  | **Test File**                  | **Pass/Fail** |
-| _Grace period (≤30 min = free)_ | _CalculateFee_GracePeriod_30Min_ReturnsFree, CalculateFee_GracePeriod_29Min_ReturnsFree_ | _ParkingFeeCalculatorTests.cs_ | _Pass_        |
-| _Motorcycle rate: 500 KHR/hr_   | _CalculateFee_Motorcycle_2Hours_Returns1000_                                             | _ParkingFeeCalculatorTests.cs_ | _Pass_        |
-|                                 |                                                                                          |                                |               |
-|                                 |                                                                                          |                                |               |
-
-_↑ This is just a sample row. Add as many rows as you need in your own report._
+| **Business Rule** | **Test Method Name(s)** | **Test File** | **Pass/Fail** |
+| ----------------- | ----------------------- | ------------- | ------------- |
+| **Grace Period** (≤30 min = free) | `CalculateFee_GracePeriod_30MinutesOrLess_ReturnsFree`, `GracePeriod_IsAlwaysZero` (PBT), `EdgeToEdge_GracePeriod_CheckOutWithin15Min_FreeParking` | `ParkingFeeCalculatorTests.cs`, `ParkingFlowIntegrationTests.cs` | Pass |
+| **Motorcycle Rate** (500 KHR/hr) | `CalculateFee_Motorcycle_2Hours_Returns1000` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Car Rate** (1000 KHR/hr) | `CalculateFee_Car_3Hours_Returns3000` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **SUV Rate** (1500 KHR/hr) | `CalculateFee_SUV_1Hour_Returns1500` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Duration Rounding** (Fractional hours round up) | `CalculateFee_DurationRounding_AlwaysRoundsUp`, `CalculateFee_ExactGraceBoundary_31Minutes_Returns1Hour` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Daily Cap** (Motorcycle: 4k, Car: 10k, SUV: 15k) | `CalculateFee_DailyCap_Motorcycle_10Hours_CappedAt4000` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Overnight Fee** (+2k for 10 PM - 6 AM) | `CalculateFee_Overnight_Car_4Hours_Returns6000`, `CalculateFee_NoOvernight_Car_9Hours_Returns8000` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Weekend Surcharge** (+20% Sat/Sun) | `CalculateFee_WeekendSurcharge_Saturday_Car_2Hours_Returns2400` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Holiday Surcharge** (+50%, takes priority) | `CalculateFee_HolidaySurcharge_TakesPriorityOverWeekend` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Membership Discount** (Gold 25%, etc) | `CalculateFee_MembershipDiscount_Gold_25PercentOff` | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Lost Ticket Penalty** (+20k flat penalty) | `CalculateFee_LostTicket_Car_2Hours_Returns22000`, `LostTicketPenalty_AppliesCorrectly` (PBT) | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Check-Out before Check-In** (Throws validation err) | `CalculateFee_CheckOutBeforeCheckIn_ThrowsArgumentException`, `CheckOutBeforeCheckIn_ThrowsArgumentException` (PBT) | `ParkingFeeCalculatorTests.cs` | Pass |
+| **Check-In Flow** (Saves ticket, looks up membership) | `CheckInAsync_NewVehicle_LookUpMembership`, `CheckInAsync_Successful_SavesTicketAndLooksUpMembership` | `ParkingSessionManagerTests.cs` | Pass |
+| **Duplicate Check-In** (Throws exception, original active) | `CheckInAsync_Duplicate_ThrowsInvalidOperationException_DoesNotSave`, `ErrorRecovery_DuplicateCheckIn_ThrowsAndOriginalRemains` | `ParkingSessionManagerTests.cs`, `ParkingFlowIntegrationTests.cs` | Pass |
+| **Check-Out & Payment** (Updates ticket, sends receipt) | `CheckOutAsync_HappyPath_UpdatesTicketAndSendsReceipt` | `ParkingSessionManagerTests.cs` | Pass |
+| **Payment Failure** (Throws exception, ticket stays active) | `CheckOutAsync_PaymentFailure_ThrowsException_DoesNotUpdateOrSendReceipt`, `ErrorRecovery_FailedPayment_TicketRemainsActive` | `ParkingSessionManagerTests.cs`, `ParkingFlowIntegrationTests.cs` | Pass |
+| **Notification Failure** (Graceful degradation, completes checkout) | `CheckOutAsync_NotificationFailure_StillSucceeds_GracefulDegradation` | `ParkingSessionManagerTests.cs` | Pass |
 
 Submission Checklist
 
 **Tick each item before submitting:**
 
-- Git history shows TDD commits (minimum 8 RED/GREEN/REFACTOR commits)
+- [x] Git history shows TDD commits (minimum 8 RED/GREEN/REFACTOR commits)
 
-- All tests pass (dotnet test output included above)
+- [x] All tests pass (dotnet test output included above)
 
-- At least 10 unit test scenarios for ParkingFeeCalculator
+- [x] At least 10 unit test scenarios for ParkingFeeCalculator
 
-- At least 5 test double scenarios for ParkingSessionManager
+- [x] At least 5 test double scenarios for ParkingSessionManager
 
-- At least 5 property-based tests written with FsCheck
+- [x] At least 5 property-based tests written with FsCheck
 
-- At least 5 integration test scenarios
+- [x] At least 5 integration test scenarios
 
-- Traceability matrix is complete (every business rule has at least one test)
+- [x] Traceability matrix is complete (every business rule has at least one test)
 
-- Code coverage report included
+- [x] Code coverage report included
 
-- Laptop ready for 1-on-1 demo (project builds, all tests pass)
+- [x] Laptop ready for 1-on-1 demo (project builds, all tests pass)
 
-- All sections of this report are filled in
+- [x] All sections of this report are filled in
