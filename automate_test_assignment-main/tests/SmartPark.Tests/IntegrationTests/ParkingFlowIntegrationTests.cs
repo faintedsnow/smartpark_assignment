@@ -73,7 +73,33 @@ public class ParkingFlowIntegrationTests
     }
 
     #region Full Parking Flow
-    // End-to-end scenarios from check-in through check-out
+    [Fact]
+    public async Task FullFlow_ComplexScenario_ChecksInAndChecksOut_WithAllModifiers()
+    {
+        // Saturday 8 PM (Weekend Surcharge, later Overnight Fee)
+        _currentTime = new DateTime(2026, 3, 21, 20, 0, 0); 
+        var ticket = await _manager.CheckInAsync("TEST-002", VehicleType.SUV);
+        
+        var activeTicket = await _repository.GetActiveTicketByPlateAsync("TEST-002");
+        Assert.NotNull(activeTicket);
+        
+        // Check out at 1 AM the next day (5 hours total -> 4.5 hrs post-grace -> 5 billable hours)
+        _currentTime = new DateTime(2026, 3, 22, 1, 0, 0);
+        var result = await _manager.CheckOutAsync(ticket.TicketId, "012-345-678");
+        
+        // Base Fee: SUV 1500/hr * 5 hrs = 7500.
+        // Weekend Surcharge: 20% of 7500 = 1500.
+        // Overnight Fee: 2000.
+        // Total = 7500 + 2000 + 1500 = 11000 KHR.
+        Assert.Equal(11000m, result.TotalFee);
+        
+        var inactiveTicket = await _repository.GetActiveTicketByPlateAsync("TEST-002");
+        Assert.Null(inactiveTicket);
+        
+        var completedTicket = await _repository.GetTicketByIdAsync(ticket.TicketId);
+        Assert.NotNull(completedTicket);
+        Assert.NotNull(completedTicket.CheckOutTime);
+    }
     #endregion
 
     #region Multiple Vehicles
