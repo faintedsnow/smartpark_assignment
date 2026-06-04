@@ -115,6 +115,17 @@ public class ParkingFeeCalculator
 
         decimal overnightFee = spansPast2200 ? OvernightFlatFee : 0m;
 
-        return new ParkingFeeResult { TotalFee = baseFee + overnightFee };
+        decimal surchargeRate = 0m;
+        if (isHoliday)
+        {
+            surchargeRate = HolidaySurchargeRate;
+        }
+        else if (checkIn.DayOfWeek == DayOfWeek.Saturday || checkIn.DayOfWeek == DayOfWeek.Sunday)
+        {
+            surchargeRate = WeekendSurchargeRate;
+        }
+        decimal surchargeAmount = baseFee * surchargeRate;
+
+        return new ParkingFeeResult { TotalFee = baseFee + overnightFee + surchargeAmount };
     }
 }
