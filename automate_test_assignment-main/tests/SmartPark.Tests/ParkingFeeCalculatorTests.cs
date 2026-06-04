@@ -49,18 +49,68 @@ public class ParkingFeeCalculatorTests
         // Assert
         Assert.Equal(1000m, result.TotalFee);
     }
+
+    [Fact]
+    public void CalculateFee_Car_3Hours_Returns3000()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        var checkOut = checkIn.AddHours(3);
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+        Assert.Equal(3000m, result.TotalFee);
+    }
+
+    [Fact]
+    public void CalculateFee_SUV_1Hour_Returns1500()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        var checkOut = checkIn.AddHours(1);
+        var result = _calculator.CalculateFee(VehicleType.SUV, MembershipTier.Guest, checkIn, checkOut);
+        Assert.Equal(1500m, result.TotalFee);
+    }
     #endregion
 
     #region Grace Period
-    // Test the free parking window and its boundaries
+    [Theory]
+    [InlineData(0)]
+    [InlineData(15)]
+    [InlineData(29)]
+    [InlineData(30)]
+    public void CalculateFee_GracePeriod_30MinutesOrLess_ReturnsFree(int minutes)
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        var checkOut = checkIn.AddMinutes(minutes);
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+        Assert.Equal(0m, result.TotalFee);
+    }
     #endregion
 
     #region Duration Rounding
-    // Test how partial hours are rounded for billing
+    [Theory]
+    [InlineData(31, 1)]
+    [InlineData(60, 1)]
+    [InlineData(61, 2)]
+    [InlineData(90, 1)]
+    [InlineData(91, 2)]
+    [InlineData(150, 2)]
+    [InlineData(151, 3)]
+    public void CalculateFee_DurationRounding_AlwaysRoundsUp(int totalMinutes, int expectedBillableHours)
+    {
+        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        var checkOut = checkIn.AddMinutes(totalMinutes);
+        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+        Assert.Equal(expectedBillableHours * 1000m, result.TotalFee);
+    }
     #endregion
 
     #region Daily Cap
-    // Test that fees respect maximum daily limits per vehicle type
+    [Fact]
+    public void CalculateFee_DailyCap_Motorcycle_10Hours_CappedAt4000()
+    {
+        var checkIn = new DateTime(2026, 3, 16, 8, 0, 0);
+        var checkOut = checkIn.AddHours(10);
+        var result = _calculator.CalculateFee(VehicleType.Motorcycle, MembershipTier.Guest, checkIn, checkOut);
+        Assert.Equal(4000m, result.TotalFee);
+    }
     #endregion
 
     #region Overnight Fee
