@@ -95,6 +95,26 @@ public class ParkingFeeCalculator
             baseFee = dailyCap;
         }
 
-        return new ParkingFeeResult { TotalFee = baseFee };
+        bool spansPast2200 = false;
+        var current = checkIn;
+        while (current < checkOut)
+        {
+            var tenPm = current.Date.AddHours(OvernightHourThreshold);
+            if (current < tenPm && checkOut > tenPm)
+            {
+                spansPast2200 = true;
+                break;
+            }
+            else if (current >= tenPm && current < current.Date.AddDays(1)) 
+            {
+                spansPast2200 = true;
+                break;
+            }
+            current = current.Date.AddDays(1);
+        }
+
+        decimal overnightFee = spansPast2200 ? OvernightFlatFee : 0m;
+
+        return new ParkingFeeResult { TotalFee = baseFee + overnightFee };
     }
 }
