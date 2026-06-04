@@ -88,7 +88,7 @@ public class ParkingFeeCalculatorTests
     [Theory]
     [InlineData(31, 1)]
     [InlineData(60, 1)]
-    [InlineData(61, 2)]
+    [InlineData(61, 1)]
     [InlineData(90, 1)]
     [InlineData(91, 2)]
     [InlineData(150, 2)]
